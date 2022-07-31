@@ -1,4 +1,4 @@
-# ardour-track-copy
+# ardour-playlist-copy
 Copy Ardour playlists between sessions.
 
 USAGE:

@@ -1,4 +1,6 @@
-# Created by Ben (Out of Order Enlgish Podcast, Extraordinary English Podcast)
+# Created by Ben 
+# Out of Order Enlgish Podcast: https://www.youtube.com/channel/UCiTiHX54WjoJok-PDgHVjBw
+# Extraordinary English Podcast: https://www.youtube.com/channel/UC4_xy_GL4LZgM7a4ey2LCqw
 
 
 import sys

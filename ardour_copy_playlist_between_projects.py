@@ -2,23 +2,24 @@
 # Out of Order Enlgish Podcast: https://www.youtube.com/channel/UCiTiHX54WjoJok-PDgHVjBw
 # Extraordinary English Podcast: https://www.youtube.com/channel/UC4_xy_GL4LZgM7a4ey2LCqw
 
-
+import os           
 import sys
+import time
 import xml.etree.ElementTree as ET
 
 class ardour_project_op():
 
+
     def __init__(self) -> None:
-        self.max_src_id = 0
+        self.dst_max_source_id = 0
         self.src_medias = []
-        self.dst_medias = []
-        self.media_ids = []
+        self.media_ids_in_regions = []
 
 
     def copy_playlist_between_projects(self, path_src_project, path_dst_project):
 
-        self.tree = ET.parse(path_src_project) 
-        self.root = self.tree.getroot()
+        self.src_tree = ET.parse(path_src_project) 
+        self.src_root = self.src_tree.getroot()
 
         self.dst_tree = ET.parse(path_dst_project)
         self.dst_root = self.dst_tree.getroot()
@@ -41,56 +42,72 @@ class ardour_project_op():
 
 
         #rs = root.find('UnusedPlaylists')
-        rs = self.root.find('Playlists')
+        rs = self.src_root.find('Playlists')
         # find the first 'item' object
-        for pl in rs:
-            print(pl.get('name'))
+        #for pl in rs:
+        #    print(pl.get('name'))
 
-        pls = rs.findall('Playlist')
-        for pl in pls:
+        pls_src = rs.findall('Playlist')
+        for pl in pls_src:
             # if we don't need to know the name of the attribute(s), get the dict
             #print(pl.attrib)      
             # if we know the name of the attribute, access it directly
-            print(pl.get('name'))
+            #print(pl.get('name'))
+
+            plname = pl.get("name")
+            plid = pl.get("id")
+            #2022-12 - If it's not the wanted playlist, ignore it
+            if (plid != wanted_plid): 
+                continue
 
             for rgn in pl.findall("Region"):
                 #print(rgn.attrib)
                 ch = rgn.get("channels")
                 src_0 = int(rgn.get("source-0"))
-                if src_0 not in self.media_ids:
-                    self.media_ids.append(src_0)
+                if src_0 not in self.media_ids_in_regions:
+                    self.media_ids_in_regions.append(src_0)
                 
                 if (ch == "2"):
                     src_1 = int(rgn.get("source-1"))
-                    if src_1 not in self.media_ids:
-                        self.media_ids.append(src_1)
+                    if src_1 not in self.media_ids_in_regions:
+                        self.media_ids_in_regions.append(src_1)
 
 
 
 
-        rs = self.root.find('Sources').findall("Source")
-        for src in rs:
+        rs = self.src_root.find('Sources').findall("Source")
+        for source in rs:
             #print(src.attrib)
-            mid = int(src.get("id"))
+            mid = int(source.get("id"))
 
-            for gid in self.media_ids:
+            for gid in self.media_ids_in_regions:
                 if (mid==gid):
-                    if (gid <= self.max_src_id):
+                    if (gid <= self.dst_max_source_id):
                         id_new = self.get_next_source_id()
                         self.change_source_id(mid, id_new)
                         #print(src)
-                        self.src_medias.append(src)
+                    self.src_medias.append(source)
 
 
+        import glob
+        gpath = os.path.abspath(os.path.join(path_src_project, os.pardir))
+        gpath = os.path.join(gpath, "interchange", "*","audiofiles")
+        path_src_interchange_audio = glob.glob(gpath)[0]
+        #/media/data/Belgelerim/PROJE/ENLEM ve BOYLAM/2022-12_EB-172/interchange/2022-12_EB-172/audiofiles
+        
         #DESTINATION Ardour project...
 
-
+        #add media sources from src project to the dst project
         el = self.dst_root.find("Sources")
         for ms in self.src_medias:
+            org_path = ms.get("origin")
+            if (org_path == ""):
+                org_path = os.path.join(path_src_interchange_audio, ms.get("name"))
+                ms.set("origin", org_path)
             el.append(ms)
 
         dst_pls = self.dst_root.find("Playlists")
-        src_pls = self.root.find('Playlists').findall('Playlist')
+        src_pls = self.src_root.find('Playlists').findall('Playlist')
         for pl in src_pls:
             plname = pl.get("name")
             plid = pl.get("id")
@@ -101,10 +118,12 @@ class ardour_project_op():
                 #         print("DESTINATION project already has the same playlist id: " + plid + " - pl name: " + plname)
                         #exit()
                 gnewplid = self.generate_new_playlist_id_for_destination()
+                gnewname = "mb-import_" + plname
                 pl.set("id", str(gnewplid))
-                pl.set("name", "mb-import_" + plname)
+                pl.set("name", gnewname)
                 pl.set("orig-track-id", "0") #unassign track
                 dst_pls.append(pl)
+                print("new plid: " , gnewplid, " - new pl name: ", gnewname)
                 print( plname + " playlist inserted into the destination project. You can switch to it in Ardour GUI. Track > Playlists > Advanced > Copy from..." )
 
 
@@ -119,13 +138,26 @@ class ardour_project_op():
         #             set_a_new_id()
             
 
+        #add src project path to dst project 
+        #<Option name="audio-search-path" value="
+        dst_opts = self.dst_root.find('Config').findall('Option')
+        for opt in dst_opts:
+            opt_name = opt.get("name")
+            if (opt_name == "audio-search-path"):
+                opt_value = str(opt.get("value"))     
+                gstr = ":" + os.path.abspath(os.path.join(path_src_project, os.pardir))
+                if (opt_value.find(gstr) < 0):
+                    opt_value += gstr
+                   # opt.set("value", opt_value) #2022-12 - disable adding extra path
+
+        #set new max id to dst project
+        self.dst_root.set("id-counter", str(self.dst_max_source_id))
 
 
         #tree.write("/tmp/test2.xml")
         #tree.write("/tmp/test2.xml", xml_declaration=True) 
         #tree.write("/tmp/test2.xml", encoding='UTF-8', xml_declaration=True) 
-        import os
-        os.rename(path_dst_project, path_dst_project + ".pl_" + wanted_plid + ".bak")
+        os.rename(path_dst_project, path_dst_project + "_" + str(int(time.time())) + ".bak")
         self.dst_tree.write(path_dst_project, encoding='UTF-8', xml_declaration=True)
 
 
@@ -139,18 +171,18 @@ class ardour_project_op():
 
 
     def list_playlists_from_source_project(self):
-        src_pls = self.root.find('Playlists').findall('Playlist')
+        src_pls = self.src_root.find('Playlists').findall('Playlist')
         for pl in src_pls:
             print(pl.get("id") + " : " + pl.get("name"))
 
     def get_max_source_id_from_destination(self):
-        self.max_src_id = int(self.dst_root.get("id-counter"))
+        self.dst_max_source_id = int(self.dst_root.get("id-counter"))
         return
 
         rs = self.dst_root.find('Sources').findall("Source")
         for it in rs:
             sid = int(it.get("id"))
-            self.max_src_id = max(self.max_src_id, sid)
+            self.dst_max_source_id = max(self.dst_max_source_id, sid)
 
     def generate_new_playlist_id_for_destination(self):
         gidmax = 0
@@ -164,12 +196,12 @@ class ardour_project_op():
 
             
     def get_next_source_id(self):
-        self.max_src_id += 1
-        return self.max_src_id
+        self.dst_max_source_id += 1
+        return self.dst_max_source_id
 
     def change_source_id(self, pid_old, pid_new):
         #change it from Session/Sources/Source
-        rs = self.root.find('Sources').findall("Source")
+        rs = self.src_root.find('Sources').findall("Source")
         for src in rs:
             #print(src.attrib)
             gid = int(src.get("id"))
@@ -177,7 +209,7 @@ class ardour_project_op():
                 src.set("id", str(pid_new))
         
         #change it from Session/Playlists/Playlist/Region
-        pls = self.root.find('Playlists').findall('Playlist')
+        pls = self.src_root.find('Playlists').findall('Playlist')
         for pl in pls:
             for rgn in pl.findall("Region"):
                 #print(rgn.attrib)

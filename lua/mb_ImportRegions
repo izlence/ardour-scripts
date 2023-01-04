@@ -1,0 +1,92 @@
+ardour { ["type"] = "EditorAction", name = "mb:ImportRegions",
+	license     = "MIT",
+	author      = "mbirgin",
+	description = [[Import previously exported regions]]
+}
+
+function factory (params) return function ()
+	
+
+
+	local tmpfile = '/tmp/mb_ardour.tsv'
+
+-- 3. Parse the data to a key-value table (specify a key for each column):
+local keyTable = {}
+for line in io.lines(tmpfile) do
+	local start, pos, len, path1, path2 = line:match("(%d-)\t(%d-)\t(%d*)\t(.-)\t(.*)")
+	print(start, pos, len, path1, path2)
+	keyTable[#keyTable + 1] = {["start"] = start, ["pos"] = pos, ["len"] = len, ["path1"] = path1, ["path2"] = path2}
+end
+
+print(keyTable)
+
+
+	for idx, t in pairs(keyTable) do
+		local files = C.StringVector()
+
+		print(idx, t)
+		print(t.pos, t.start, t.len, t.path1, t.path2)
+
+		
+		files:push_back(t.path1)
+		len2 = string.len (t.path2)		
+		if len2>3 then files:push_back(t.path2) end
+
+              	-- Editor:do_import (files, Editing.ImportMergeFiles, Editing.ImportToTrack, ARDOUR.SrcQuality.SrcBest, ARDOUR.MidiTrackNameSource.SMFTrackName, ARDOUR.MidiTempoMapDisposition.SMFTempoIgnore, t.pos, ARDOUR.PluginInfo())
+
+		-- Editor:do_import (files, Editing.ImportDistinctFiles, Editing.ImportToTrack, ARDOUR.SrcQuality.SrcBest, ARDOUR.MidiTrackNameSource.SMFTrackName, ARDOUR.MidiTempoMapDisposition.SMFTempoIgnore, t.pos, ARDOUR.PluginInfo())
+        
+        	ret = Editor:do_import (files, Editing.ImportMergeFiles, Editing.ImportToTrack, ARDOUR.SrcQuality.SrcBest, ARDOUR.MidiTrackNameSource.SMFTrackName, ARDOUR.MidiTempoMapDisposition.SMFTempoIgnore, t.pos, ARDOUR.PluginInfo())
+
+ret_files = ret[1]
+ret_pos_end = ret[7] -- diffrent from do_embed ret
+
+
+for it3 in ret_files:iter() do
+ print("---", it3)
+end
+-- print(next(ret))
+for key, value in pairs(ret) do
+  print(key, value)
+end
+
+--print("***", ret[5])
+
+-- Get the list of selected tracks
+local sel = Editor:get_selection()
+for route in sel.tracks:routelist():iter() do
+    pl = route:to_track():playlist()
+    print("plname:", pl:name())
+    
+    -- rg = pl:find_next_region(ret_pos_end, ARDOUR.RegionPoint.End, 0)
+    rg = pl:top_region_at(ret_pos_end-1)
+    print("-rginfo-", rg:name(), rg:length())
+    print("tbl", t.start, t.len, t.pos)
+    rg:set_position(0, 0)
+    --rg:set_start(4410000)
+    --rg:set_length(t.len, 0)
+    rg:trim_to(t.start, t.len, 0)
+    rg:set_position(t.pos, 0)
+    --rg:cut_front(4410000, 0)
+    --rg:cut_end(8820000, 0)
+    --rg:move_start(4467000, 0)
+    --rg:set_initial_position(660000)
+end
+
+	end
+	
+	-- files:push_back("/home/m1/sil/music/141018-133622.WAV")
+	
+	-- Editing.ImportAsRegion
+	-- Editing.ImportToTrack
+	-- Editing.ImportAsTrack
+	
+	-- local pos = Session:transport_sample ()
+	-- Editor:do_import (files,
+	-- 	Editing.ImportDistinctFiles, Editing.ImportToTrack, ARDOUR.SrcQuality.SrcBest,
+	-- 	ARDOUR.MidiTrackNameSource.SMFTrackName, ARDOUR.MidiTempoMapDisposition.SMFTempoIgnore,
+	-- 	pos, ARDOUR.PluginInfo())
+
+
+
+end end

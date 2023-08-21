@@ -12,7 +12,7 @@ python3 ardour_copy_playlist_between_projects.py "SourceProject.ardour" "Destina
 # Ardour Lua Scripts
 
 
-For LUA Scrips, put the .lua files in ~/.config/ardour6/scripts/ folder.
+For LUA Scrips, put the .lua files in ~/.config/ardour7/scripts/ folder.
 
 A quick screencast for what the script does:
 

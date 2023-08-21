@@ -9,10 +9,6 @@ function factory (params) return function ()
 
 
 
-
-
-
-
 	local tmpfile = '/tmp/mb_ardour.tsv'
 
 -- 3. Parse the data to a key-value table (specify a key for each column):
@@ -25,7 +21,10 @@ end
 
 print(keyTable)
 
-
+local sel = Editor:get_selection()
+for route in sel.tracks:routelist():iter() do
+	gtrack = route:to_track()
+end
 
 
 	for idx, t in pairs(keyTable) do
@@ -37,7 +36,9 @@ print(keyTable)
 		len2 = string.len (t.path2)		
 		if len2>3 then files:push_back(t.path2) end
 
-		ret = Editor:do_embed (files, Editing.ImportMergeFiles, Editing.ImportToTrack, t.pos, ARDOUR.PluginInfo())
+		gpos = Temporal.timepos_t (t.pos)
+		ret = Editor:do_embed (files, Editing.ImportMergeFiles, Editing.ImportToTrack, gpos, ARDOUR.PluginInfo(), gtrack)
+		-- ret = Editor:do_embed (files, Editing.ImportMergeFiles, Editing.ImportToTrack, t.pos, ARDOUR.PluginInfo())
 ret_files = ret[1]
 ret_pos_end = ret[4]
 
@@ -58,14 +59,17 @@ for route in sel.tracks:routelist():iter() do
 pl = route:to_track():playlist()
 print(pl:name())
 -- rg = pl:find_next_region(ret_pos_end, ARDOUR.RegionPoint.End, 0)
-rg = pl:top_region_at(ret_pos_end-1)
+-- rg = pl:top_region_at(ret_pos_end-1)
+print(ret_pos_end:samples())
+rg = pl:top_region_at(Temporal.timepos_t(ret_pos_end:samples() - 1))
 print("----", rg:name(), rg:length())
 print("tbl", t.start, t.len, t.pos)
-rg:set_position(0, 0)
+rg:set_position(Temporal.timepos_t(0), Temporal.timepos_t(0))
 --rg:set_start(4410000)
 --rg:set_length(t.len, 0)
-rg:trim_to(t.start, t.len, 0)
-rg:set_position(t.pos, 0)
+-- rg:trim_to(t.start, t.len, 0)
+rg:trim_to(Temporal.timepos_t (t.start), Temporal.timecnt_t (t.len))
+rg:set_position(Temporal.timepos_t(t.pos), Temporal.timepos_t(0))
 --rg:cut_front(4410000, 0)
 --rg:cut_end(8820000, 0)
 --rg:move_start(4467000, 0)

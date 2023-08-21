@@ -1,5 +1,5 @@
 
-# Ardour Lua Scripts
+# Ardour Lua Scripts (for Ardour v7)
 
 
 For LUA Scrips, put the .lua files in ~/.config/ardour7/scripts/ folder.

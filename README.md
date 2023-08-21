@@ -1,13 +1,3 @@
-# ardour-playlist-copy (Python Script)
-Copy Ardour playlists between sessions.
-
-USAGE:
-
-python3 ardour_copy_playlist_between_projects.py "SourceProject.ardour" "DestinationProject.ardour"
-
-
-
-
 
 # Ardour Lua Scripts
 
@@ -31,3 +21,11 @@ LIMITATIONS:
 NOTES:
 Developed / Tested on Ubuntu 20.04 with Ardour 6.9.0
 
+
+
+# ardour-playlist-copy (Python Script) (Tested with Ardour v6)
+Copy Ardour playlists between sessions.
+
+USAGE:
+
+python3 ardour_copy_playlist_between_projects.py "SourceProject.ardour" "DestinationProject.ardour"

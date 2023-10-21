@@ -19,7 +19,7 @@ LIMITATIONS:
 - Since the exported file location is a Linux path (/tmp/mb_ardour.tsv), may not work on Windows. (for now). 
 
 NOTES:
-Developed / Tested on Ubuntu 20.04 with Ardour 6.9.0
+Developed / Tested on Ubuntu 22.04 with Ardour 7.3.0
 
 
 
